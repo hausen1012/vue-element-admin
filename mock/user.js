@@ -5,6 +5,9 @@ const tokens = {
   },
   editor: {
     token: 'editor-token'
+  },
+  gyadmin: {
+    token: 'gyadmin-token'
   }
 }
 
@@ -20,6 +23,12 @@ const users = {
     introduction: 'I am an editor',
     avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
     name: 'Normal Editor'
+  },
+  'gyadmin-token': {
+    roles: ['gyadmin'],
+    introduction: 'I am an gyadmin',
+    avatar: 'https://wpimg.wallstcn.com/f778738c-e4f8-4870-b634-56703b4acafe.gif',
+    name: 'Gyadmin Worker'
   }
 }
 
