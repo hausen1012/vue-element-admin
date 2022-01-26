@@ -7,6 +7,7 @@
       :layout="layout"
       :page-sizes="pageSizes"
       :total="total"
+      :page-count="pagerCount"
       v-bind="$attrs"
       @size-change="handleSizeChange"
       @current-change="handleCurrentChange"
@@ -30,13 +31,17 @@ export default {
     },
     limit: {
       type: Number,
-      default: 20
+      default: 10
     },
     pageSizes: {
       type: Array,
       default() {
-        return [10, 20, 30, 50]
+        return [10, 20, 50, 100]
       }
+    },
+    pagerCount: {
+      type: Number,
+      default: 5
     },
     layout: {
       type: String,
@@ -93,7 +98,8 @@ export default {
 <style scoped>
 .pagination-container {
   background: #fff;
-  padding: 32px 16px;
+  text-align: right;
+  margin-top: 10px;
 }
 .pagination-container.hidden {
   display: none;

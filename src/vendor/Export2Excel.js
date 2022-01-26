@@ -162,7 +162,7 @@ export function export_json_to_excel({
     data.unshift(multiHeader[i])
   }
 
-  var ws_name = "SheetJS";
+  var ws_name = "Sheet1";
   var wb = new Workbook(),
     ws = sheet_from_array_of_arrays(data);
 
@@ -185,11 +185,11 @@ export function export_json_to_excel({
       /*再判断是否为中文*/
       else if (val.toString().charCodeAt(0) > 255) {
         return {
-          'wch': val.toString().length * 2
+          'wch': val.toString().length * 2 + 1
         };
       } else {
         return {
-          'wch': val.toString().length
+          'wch': val.toString().length + 1
         };
       }
     }))

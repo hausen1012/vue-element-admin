@@ -386,6 +386,19 @@ export const asyncRoutes = [
     ]
   },
 
+  {
+    path: '/gyadmin',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/gyadmin/index'),
+        name: 'gy',
+        meta: { title: '广医', icon: 'el-icon-s-promotion'}
+      }
+    ]
+  },
+
   // 404 page must be placed at the end !!!
   { path: '*', redirect: '/404', hidden: true }
 ]
@@ -393,7 +406,8 @@ export const asyncRoutes = [
 const createRouter = () => new Router({
   // mode: 'history', // require service support
   scrollBehavior: () => ({ y: 0 }),
-  routes: constantRoutes
+  routes: constantRoutes,
+  mode: 'history'
 })
 
 const router = createRouter()
