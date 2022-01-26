@@ -1,5 +1,4 @@
 import request from '@/utils/request'
-const qs = require('qs');
 
 export function fetchList(data) {
   return request({
@@ -13,7 +12,16 @@ export function fetchList(data) {
 export function createGyRecord(data) {
   return request({
     url: '/gy/create',
-    method: 'delete',
+    method: 'post',
+    data,
+    baseURL: 'http://localhost'
+  })
+}
+
+export function batchDeleteGyRecord(data) {
+  return request({
+    url: '/gy/batchDelete',
+    method: 'post',
     data,
     baseURL: 'http://localhost'
   })

@@ -5,8 +5,32 @@
       <el-button class="filter-item" style="margin-left: 10px" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
-      <el-button class="filter-item" type="primary" icon="el-icon-folder-add">上传血清压缩包</el-button>
-      <el-button class="filter-item" type="primary" icon="el-icon-folder-add">上传血浆压缩包</el-button>
+      <el-upload
+        class="filter-item"
+        style="margin: 0px 10px 10px 40px"
+        name="file"
+        action="http://localhost/gy/uploadSerumZip"
+        :before-upload="handleBeforeUpload"
+        :on-success="uploadSuccess"
+        :on-error="uploadFail"
+        :multiple="false"
+        :file-list="fileList"
+        :show-file-list=false>
+        <el-button :loading="listLoading" type="primary" icon="el-icon-folder-add">上传血清压缩包</el-button>
+      </el-upload>
+      <el-upload
+        class="filter-item"
+        style="margin: 0px 10px 10px 0px"
+        name="file"
+        action="http://localhost/gy/uploadPlasmaZip"
+        :before-upload="handleBeforeUpload"
+        :on-success="uploadSuccess"
+        :on-error="uploadFail"
+        :multiple="false"
+        :file-list="fileList"
+        :show-file-list=false>
+        <el-button :loading="uploadLoading" type="primary" icon="el-icon-folder-add">上传血浆压缩包</el-button>
+      </el-upload>
       <el-button class="filter-item" type="primary" icon="el-icon-document" @click="handleGenerate">
         生成数据
       </el-button>
@@ -16,16 +40,19 @@
       <el-button class="filter-item" type="danger" icon="el-icon-delete" @click="handleEmptyData">
         清空数据
       </el-button>
+
+      <el-button class="filter-item" style="float:right;" type="danger" icon="el-icon-delete" @click="handleBatchDelete()">批量删除</el-button>
       <el-button class="filter-item" style="float:right;" type="primary" icon="el-icon-edit" @click="handleCreate">
         新增记录
       </el-button>
     </div>
     <el-table
-      v-loading="loading"
-      element-loading-text="拼命加载中"
+      v-loading="listLoading"
+      element-loading-text="正在加载中"
       element-loading-spinner="el-icon-loading"
       :data="tableData"
       style="width: 100%"
+      @selection-change="handleSelectionChange"
       border>
       <el-table-column
       type="selection"
@@ -146,19 +173,23 @@
 </template>
 
 <script>
-import { fetchList, createGyRecord, updateGyRecord, deleteGyRecord, generateData, clearAll } from '@/api/gyadmin'
+import { fetchList, createGyRecord, updateGyRecord, deleteGyRecord, batchDeleteGyRecord, generateData, clearAll } from '@/api/gyadmin'
 import Pagination from '@/components/Pagination'
 import { parseTime } from '@/utils'
-
-const sexOptions = ['男', '女']
 
 export default {
   name: 'Tab',
   components: { Pagination },
   data() {
     return {
-      loading: false,
+      // loading
+      listLoading: false,
+      uploadLoading: false,
       downloadLoading: false,
+      // 表格上
+      fileList: [],
+      selectIds: [],
+      // 表格
       tableData: null,
       total: 0,
       listQuery: {
@@ -168,8 +199,8 @@ export default {
         order: 'id',
         sort: 'desc'
       },
-      list: null,
-      sexOptions,
+      // 表单
+      sexOptions: ['男', '女'],
       temp: {},
       dialogFormVisible: false,
       dialogStatus: '',
@@ -205,13 +236,13 @@ export default {
   },
   methods: {
     getList() {
-      this.loading = true
+      this.listLoading = true
       fetchList(this.listQuery).then(response => {
-        this.loading = false
+        this.listLoading = false
         this.tableData = response.data.records
         this.total = response.data.page.total
       }).catch(() => {
-        this.loading = false
+        this.listLoading = false
       })
     },
     handleFilter() {
@@ -220,6 +251,38 @@ export default {
     },
     resetTemp() {
       this.temp = {}
+    },
+    handleSelectionChange(data) {
+      this.selectIds = data.map(i => i.id)
+      console.log(this.selectIds)
+    },
+    handleBatchDelete() {
+      this.$confirm('此操作将永久删除记录, 是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        if (this.selectIds.length === 0) {
+          return
+        }
+        const params = new URLSearchParams()
+        params.append('ids', this.selectIds)
+        batchDeleteGyRecord(params).then((res) => {
+          // this.tableData.splice(index, 1)
+          this.getList()
+          this.$notify({
+            title: '成功',
+            message: res.message,
+            type: 'success',
+            duration: 2000
+          })
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消'
+        })
+      })
     },
     handleCreate() {
       this.resetTemp()
@@ -233,8 +296,9 @@ export default {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
           createGyRecord(this.temp).then((res) => {
-            this.tableData.unshift(this.temp)
+            // this.tableData.unshift(this.temp)
             this.dialogFormVisible = false
+            this.getList()
             this.$notify({
               title: '成功',
               message: res.message,
@@ -282,7 +346,8 @@ export default {
         const params = new URLSearchParams()
         params.append('id', row.id)
         deleteGyRecord(params).then((res) => {
-          this.tableData.splice(index, 1)
+          // this.tableData.splice(index, 1)
+          this.getList()
           this.$notify({
             title: '成功',
             message: res.message,
@@ -297,10 +362,46 @@ export default {
         })
       })
     },
+    handleBeforeUpload(file) {
+      this.$loading = true
+      const uploadLimit = 500
+      const uploadTypes = ['zip']
+      const filetype = file.name.replace(/.+\./, '')
+      const isRightSize = (file.size || 0) / 1024 / 1024 < uploadLimit
+      if (!isRightSize) {
+        this.$message.error('文件大小超过 ' + uploadLimit + 'MB')
+        return false
+      }
+      if (uploadTypes.indexOf(filetype.toLowerCase()) === -1) {
+        this.$message.warning({
+          message: '请上传后缀名为zip的文件'
+        })
+        return false
+      }
+      return true
+    },
+    uploadSuccess(res) {
+      this.$loading = false
+      this.$notify({
+        title: '成功',
+        message: res.message,
+        type: 'success',
+        duration: 2000
+      })
+    },
+    uploadFail(res) {
+      this.$loading = false
+      this.$notify({
+        title: '失败',
+        message: res.message,
+        type: 'error',
+        duration: 2000
+      })
+    },
     handleGenerate() {
-      this.loading = true
+      this.listLoading = true
       generateData().then((res) => {
-        this.loading = false
+        this.listLoading = false
         this.getList()
         this.$notify({
           title: '成功',
@@ -309,7 +410,7 @@ export default {
           duration: 2000
         })
       }).catch(() => {
-        this.loading = false
+        this.listLoading = false
       })
     },
     handleDownload() {
